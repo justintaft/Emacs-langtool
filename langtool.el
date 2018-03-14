@@ -143,6 +143,7 @@
 
 (require 'cl-lib)
 (require 'compile)
+(require 'json)
 
 (defgroup langtool nil
   "Customize langtool"
@@ -176,6 +177,7 @@
 (defvar current-prefix-arg)
 (defvar unread-command-events)
 (defvar locale-language-names)
+(defvar langtool-json-response!)
 
 ;;
 ;; faces
@@ -338,7 +340,7 @@ Do not change this variable if you don't understand what you are doing.
 
 (defun langtool--debug (key fmt &rest args)
   (when langtool--debug
-    (let ((buf (get-buffer-create "*LanguageTool Debug*")))
+    (let ((buf (get-buffer-create "*Tool Debug*")))
       (with-current-buffer buf
         (goto-char (point-max))
         (insert "---------- [" key "] ----------\n")
@@ -361,32 +363,24 @@ Do not change this variable if you don't understand what you are doing.
     (or (and (null regexp)
              (cons (point) (+ (point) length)))
         (and (looking-at regexp)
-             (cons (match-beginning 1) (match-end 1)))
-        (let ((beg (min (point-at-bol) (- (point) 20))))
-          (cl-loop while (and (not (bobp))
-                              (<= beg (point)))
-                   ;; backward just sentence length to search sentence after point
-                   do (condition-case nil
-                          (backward-char length)
-                        (beginning-of-buffer nil))
-                   if (looking-at regexp)
-                   return (cons (match-beginning 1) (match-end 1))))
+             (cons (match-beginning 0) (match-end 0)))
         default)))
 
 (defun langtool--create-overlay (tuple)
-  (let ((line (nth 0 tuple))
-        (col (nth 1 tuple))
-        (len (nth 2 tuple))
-        (sugs (nth 3 tuple))
-        (msg (nth 4 tuple))
-        (message (nth 5 tuple))
-        (rule-id (nth 6 tuple))
-        (context (nth 7 tuple)))
+  (langtool--debug "creating overlayha" "yes")
+  (let ((offset (nth 0 tuple))
+        (len (nth 1 tuple))
+        (sugs (nth 2 tuple))
+        (msg (nth 3 tuple))
+        (message (nth 4 tuple))
+        (rule-id (nth 5 tuple))
+        (context (nth 6 tuple)))
     (goto-char (point-min))
-    (forward-line (1- line))
-    ;;  1. sketchy move to column that is indicated by LanguageTool.
+
+    ;;Move to offset where grammar error is
     ;;  2. fuzzy match to reported sentence which indicated by ^^^ like string.
-    (forward-char (1- col))
+    (forward-char offset)
+    (langtool--debug "Overlay Made pointsw" "%s %s" context len)
     (cl-destructuring-bind (start . end)
         (langtool--fuzzy-search context len)
       (let ((ov (make-overlay start end)))
@@ -556,7 +550,7 @@ Do not change this variable if you don't understand what you are doing.
         (setq args (append
                     args
                     (list "-cp" langtool-java-classpath
-                          "org.languagetool.commandline.Main"))))
+                          "org.languagetool.server.HTTPServer"))))
        (langtool-language-tool-jar
         (setq args (append
                     args
@@ -580,8 +574,36 @@ Do not change this variable if you don't understand what you are doing.
    ;; never through here, but if return nil from this function make stop everything.
    1))
 
+
+(defun langtool-grammar-error-to-overlay-description (grammar-error)
+  (list (gethash "offset" grammar-error)
+	(gethash "length" grammar-error)
+	(mapcar (lambda (x) (gethash "value" x)) (gethash "replacements" grammar-error))
+	(gethash "message" grammar-error)
+	(gethash "message" grammar-error)
+	(gethash "id" (gethash "rule" grammar-error))
+	(gethash "text" (gethash "context" grammar-error))))
+
+
+(defun wait-for-whole-json-message! (json)
+    (setq langtool-json-response! (concat langtool-json-response! json))
+    (condition-case
+	nil
+	(let* ((json-object-type 'hash-table)
+	       (json-array-type 'list)
+	       (json-key-type 'string))
+	      (json-read-from-string langtool-json-response!))
+      nil))
+    
+    
 (defun langtool--process-filter (proc event)
   (langtool--debug "Filter" "%s" event)
+
+   ;;TODO nasty hack. Keep tryign to parse JSON data.
+   ;;When successfully parseed, the entire message has been received.
+   ;;Read JSON formatted data
+  (if-let ((ht (wait-for-whole-json-message! event)))
+   
   (with-current-buffer (process-buffer proc)
     (goto-char (point-max))
     (insert event)
@@ -592,25 +614,11 @@ Do not change this variable if you don't understand what you are doing.
           (finish (process-get proc 'langtool-region-finish))
           n-tuple)
       (goto-char min)
-      (while (re-search-forward langtool-output-regexp nil t)
-        (let* ((line (string-to-number (match-string 1)))
-               (column (1- (string-to-number (match-string 2))))
-               (rule-id (match-string 3))
-               (suggest (match-string 5))
-               (msg1 (match-string 4))
-               ;; rest of line. Point the raw message.
-               (msg2 (match-string 6))
-               (message
-                (concat "Rule ID: " rule-id "\n"
-                        msg1 "\n\n"
-                        msg2))
-               (suggestions (and suggest (split-string suggest "; ")))
-               (context (langtool--pointed-context-regexp msg2))
-               (len (langtool--pointed-length msg2)))
-          (setq n-tuple (cons
-                         (list line column len suggestions
-                               msg1 message rule-id context)
-                         n-tuple))))
+
+
+      (setq n-tuple
+            (mapcar 'langtool-grammar-error-to-overlay-description (gethash "matches" ht)))
+
       (process-put proc 'langtool-process-done (point))
       (when (buffer-live-p buffer)
         (with-current-buffer buffer
@@ -621,7 +629,7 @@ Do not change this variable if you don't understand what you are doing.
               (mapc
                (lambda (tuple)
                  (langtool--create-overlay tuple))
-               (nreverse n-tuple)))))))))
+               (nreverse n-tuple))))))))))
 
 ;;FIXME sometimes LanguageTool reports wrong column.
 (defun langtool--pointed-context-regexp (message)
@@ -696,28 +704,49 @@ Ordinary no need to change this."
       (setq args value)))
     (copy-sequence args)))
 
-(defun langtool--invoke-process (file begin finish &optional lang)
+(defun langtool--invoke-process (file-contents begin finish &optional lang)
+
+
+
   (when (listp mode-line-process)
     (add-to-list 'mode-line-process '(t langtool-mode-line-message)))
   ;; clear previous check
+
+
+  ;;TODO uncomment
+  ;;Start LanguageTool HTTP Server if not already started
+  ;(cl-destructuring-bind (command args)
+  ;    (langtool--basic-command&args)
+  ;    ;; Construct arguments pass to jar file.
+
+  ;    ;(setq args (append
+  ;    ;            args
+  ;    ;            (list "--port" "8081"
+  ;    ;                  "-d" (langtool--disabled-rules))))
+  ;    
+  ;    (when langtool-mother-tongue
+  ;      (setq args (append args (list "-m" langtool-mother-tongue))))
+  ;    (langtool--debug "Command" "%s: %s" command args)
+  ;    (langtool--with-java-environ 
+  ;            (apply 'start-process "LanguageTool" (generate-new-buffer "LangToolHTTPServer") command args)))
+
   (langtool--clear-buffer-overlays)
+
+  ;;clear buffered json response
+  (setq langtool-json-response! "")
+    
   (cl-destructuring-bind (command args)
       (langtool--basic-command&args)
-    ;; Construct arguments pass to jar file.
-    (setq args (append
-                args
-                (list "-c" (langtool--java-coding-system
-                            buffer-file-coding-system)
-                      "-l" (or lang langtool-default-language)
-                      "-d" (langtool--disabled-rules))))
-    (when langtool-mother-tongue
-      (setq args (append args (list "-m" langtool-mother-tongue))))
-    (setq args (append args (langtool--custom-arguments 'langtool-user-arguments)))
-    (setq args (append args (list (langtool--process-file-name file))))
-    (langtool--debug "Command" "%s: %s" command args)
     (let* ((buffer (langtool--process-create-buffer))
-           (proc (langtool--with-java-environ
-                  (apply 'start-process "LanguageTool" buffer command args))))
+	   (proc (apply 'start-process
+		        "LanguageToolCurl"
+		         buffer
+		         "curl"
+		         (list "http://localhost:8081/v2/check"
+			       "--data" (concat "language=" (or lang langtool-default-language)
+						"&text=" (url-hexify-string file-contents))))))
+
+
       (set-process-filter proc 'langtool--process-filter)
       (set-process-sentinel proc 'langtool--process-sentinel)
       (process-put proc 'langtool-source-buffer (current-buffer))
@@ -739,6 +768,7 @@ Ordinary no need to change this."
       (cond
        ((buffer-live-p source)
         (with-current-buffer source
+	  (langtool--debug "checking marks" "checking marks")
           (setq marks (langtool--overlays-region (point-min) (point-max)))
           (setq face (if marks compilation-info-face compilation-warning-face))
           (setq langtool-buffer-process nil)
@@ -748,6 +778,7 @@ Ordinary no need to change this."
        (t (setq dead t)))
       (cond
        (dead)
+
        ((/= code 0)
         (let ((msg
                (if (buffer-live-p pbuf)
@@ -926,6 +957,7 @@ Ordinary no need to change this."
       (langtool--next-overlay ov overlays))))
 
 (defun langtool--correction-popup (msg suggests)
+  (langtool--debug "suggests" "%s" suggests)
   (let ((buf (langtool--correction-buffer)))
     (delete-other-windows)
     (let ((win (split-window)))
@@ -1167,10 +1199,11 @@ Restrict to selection when region is activated.
                ;; dos (CR-LF) style EOL may destroy position of marker.
                (coding-system-change-eol-conversion
                 buffer-file-coding-system 'unix)))
-          ;; BEGIN nil means entire buffer
-          (write-region begin finish langtool-temp-file nil 'no-msg))
-        (setq file langtool-temp-file)))
-    (langtool--invoke-process file begin finish lang)
+		;; BEGIN nil means entire buffer
+	  (setq file-contents (if begin
+				  (buffer-substring begin finish)
+				  (buffer-string))))))
+    (langtool--invoke-process file-contents begin finish lang)
     (force-mode-line-update)))
 
 ;;;###autoload
@@ -1215,3 +1248,7 @@ Restrict to selection when region is activated.
 (provide 'langtool)
 
 ;;; langtool.el ends here
+
+
+(when (not langtool--debug)
+      (langtool-toggle-debug))

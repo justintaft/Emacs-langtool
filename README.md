@@ -6,8 +6,8 @@ Check for grammar errors using LanguageTool.
 ![Demo picture showing highlighting of errors and correction process.](https://media.giphy.com/media/20wo4YxXykCWoYHylD/giphy.gif)
 
 
-Use `langtool-check` to check for and highlight errors.
-Use `langtool-correct-buffer` to fix discovered errors.
+`langtool-check` to check for and highlight errors.  
+`langtool-correct-buffer` to fix discovered errors.
 
 Grammar checks are quick by using a long-running LanguageTool HTTPServer in the background. 
 

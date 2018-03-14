@@ -1,7 +1,35 @@
 langtool.el
 ===========
 
-## Install:
+Check for grammar errors using LanguageTool.
+
+![Demo picture showing highlighting of errors and correction process.](https://media.giphy.com/media/20wo4YxXykCWoYHylD/giphy.gif)
+
+
+Use `langtool-check` to check for and highlight errors.
+Use `langtool-correct-buffer` to fix discovered errors.
+
+Grammar checks are quick by using a long-running LanguageTool HTTPServer in the background. 
+
+Credits: Based off implementation https://github.com/mhayashi1120/Emacs-langtool .
+
+# Installation - Mac
+
+Install languagetool:
+
+```
+brew install languagetool
+```
+
+Place in .emacs:
+
+```
+(require 'langtool)
+(setq langetool-bin "/usr/local/bin/languagetool-server")
+```
+
+
+# Installation -  Other
 
 Install LanguageTool (and java)
 http://www.languagetool.org/

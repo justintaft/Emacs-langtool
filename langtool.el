@@ -331,6 +331,32 @@ Do not change this variable if you don't understand what you are doing.
   `(let ((coding-system-for-read langtool-process-coding-system))
      (progn ,@form)))
 
+
+(defun ensure-langtool-is-running! ()
+  "Start LanguageTool HTTP Server if not already started"
+
+  (when (not langtool-httpserver-proc)
+
+    (cl-destructuring-bind (command args)
+	(langtool--basic-command&args)
+
+	;; Construct arguments pass to jar file.
+	;(setq args (append
+	;            args
+	;            (list "--port" "8081"
+	;                  "-d" (langtool--disabled-rules))))
+
+	(when langtool-mother-tongue
+	    (setq args (append args (list "-m" langtool-mother-tongue))))
+	(langtool--debug "Command" "%s: %s" command args)
+	(setq langtool-httpserver-proc (langtool--with-java-environ (apply 'start-process "LanguageTool" (generate-new-buffer "LangToolHTTPServer") command args)))
+	(process-put langtool-httpserver-proc :port 8081 )
+
+	)))
+
+
+
+
 (defun langtool-region-active-p ()
   (cond
    ((fboundp 'region-active-p)
@@ -701,29 +727,10 @@ Ordinary no need to change this."
 
 (defun langtool--invoke-process (file-contents begin finish &optional lang)
 
-
-
   (when (listp mode-line-process)
     (add-to-list 'mode-line-process '(t langtool-mode-line-message)))
-  ;; clear previous check
 
-
-  ;;TODO uncomment
-  ;;Start LanguageTool HTTP Server if not already started
-  ;(cl-destructuring-bind (command args)
-  ;    (langtool--basic-command&args)
-  ;    ;; Construct arguments pass to jar file.
-
-  ;    ;(setq args (append
-  ;    ;            args
-  ;    ;            (list "--port" "8081"
-  ;    ;                  "-d" (langtool--disabled-rules))))
-  ;    
-  ;    (when langtool-mother-tongue
-  ;      (setq args (append args (list "-m" langtool-mother-tongue))))
-  ;    (langtool--debug "Command" "%s: %s" command args)
-  ;    (langtool--with-java-environ 
-  ;            (apply 'start-process "LanguageTool" (generate-new-buffer "LangToolHTTPServer") command args)))
+  (ensure-langtool-is-running!)
 
   (langtool--clear-buffer-overlays)
 
@@ -737,7 +744,7 @@ Ordinary no need to change this."
 		        "LanguageToolCurl"
 		         buffer
 		         "curl"
-		         (list "http://localhost:8081/v2/check"
+		         (list (format "http://localhost:%d/v2/check" (process-get langtool-httpserver-proc :port))
 			       "--data" (concat "language=" (or lang langtool-default-language)
 						"&disabledRules=WHITESPACE_RULE"
 						"&text=" (url-hexify-string file-contents))))))
@@ -1069,6 +1076,8 @@ See the Commentary section for `popup' implementation."
 (defvar langtool-autoshow--timer nil
   "Hold idle timer watch every LanguageTool processed buffer.")
 
+(defvar langtool-httpserver-proc nil)
+
 (defun langtool-autoshow-default-message (overlays)
   ;; Do not interrupt current message
   (unless (current-message)
@@ -1253,3 +1262,9 @@ Restrict to selection when region is activated.
 
 (when (not langtool--debug)
       (langtool-toggle-debug))
+(setq langtool-httpserver-proc nil)
+(setq langtool-bin "/usr/local/bin/languagetool-server")
+(setq langtool-language-tool-jar nil)
+;(setq langtool-language-tool-jar "/usr/local/Cellar/languagetool/3.8/libexec/languagetool-server.jar")
+
+

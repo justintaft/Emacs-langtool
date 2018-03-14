@@ -366,21 +366,21 @@ Do not change this variable if you don't understand what you are doing.
              (cons (match-beginning 0) (match-end 0)))
         default)))
 
-(defun langtool--create-overlay (tuple)
-  (langtool--debug "creating overlayha" "yes")
-  (let ((offset (nth 0 tuple))
-        (len (nth 1 tuple))
-        (sugs (nth 2 tuple))
-        (msg (nth 3 tuple))
-        (message (nth 4 tuple))
-        (rule-id (nth 5 tuple))
-        (context (nth 6 tuple)))
+(defun langtool--create-overlay! (langtool-json-ht)
+    "Creates overlay from a json langtool message object."
+    (let ((offset (gethash "offset" langtool-json-ht))
+	  (len (gethash "length" langtool-json-ht))
+          (sugs (mapcar (lambda (x) (gethash "value" x)) (gethash "replacements" langtool-json-ht)))
+          (msg (gethash "message" langtool-json-ht))
+          (message (gethash "message" langtool-json-ht))
+          (rule-id (gethash "id" (gethash "rule" langtool-json-ht)))
+          (context (gethash "text" (gethash "context" langtool-json-ht))))
+
     (goto-char (point-min))
 
     ;;Move to offset where grammar error is
     ;;  2. fuzzy match to reported sentence which indicated by ^^^ like string.
     (forward-char offset)
-    (langtool--debug "Overlay Made pointsw" "%s %s" context len)
     (cl-destructuring-bind (start . end)
         (langtool--fuzzy-search context len)
       (let ((ov (make-overlay start end)))
@@ -575,18 +575,8 @@ Do not change this variable if you don't understand what you are doing.
    1))
 
 
-(defun langtool-grammar-error-to-overlay-description (grammar-error)
-  (list (gethash "offset" grammar-error)
-	(gethash "length" grammar-error)
-	(mapcar (lambda (x) (gethash "value" x)) (gethash "replacements" grammar-error))
-	(gethash "message" grammar-error)
-	(gethash "message" grammar-error)
-	(gethash "id" (gethash "rule" grammar-error))
-	(gethash "text" (gethash "context" grammar-error))))
 
-
-(defun wait-for-whole-json-message! (json)
-    (setq langtool-json-response! (concat langtool-json-response! json))
+(defun langtool-json-to-hash-table (json)
     (condition-case
 	nil
 	(let* ((json-object-type 'hash-table)
@@ -594,15 +584,12 @@ Do not change this variable if you don't understand what you are doing.
 	       (json-key-type 'string))
 	      (json-read-from-string langtool-json-response!))
       nil))
-    
-    
-(defun langtool--process-filter (proc event)
-  (langtool--debug "Filter" "%s" event)
 
+(defun langtool-json-to-ovlerays! (proc json)
    ;;TODO nasty hack. Keep tryign to parse JSON data.
    ;;When successfully parseed, the entire message has been received.
    ;;Read JSON formatted data
-  (if-let ((ht (wait-for-whole-json-message! event)))
+  (if-let ((ht (langtool-json-to-hash-table json)))
    
   (with-current-buffer (process-buffer proc)
     (goto-char (point-max))
@@ -615,9 +602,7 @@ Do not change this variable if you don't understand what you are doing.
           n-tuple)
       (goto-char min)
 
-
-      (setq n-tuple
-            (mapcar 'langtool-grammar-error-to-overlay-description (gethash "matches" ht)))
+      (setq n-tuple (gethash "matches" ht))
 
       (process-put proc 'langtool-process-done (point))
       (when (buffer-live-p buffer)
@@ -628,8 +613,18 @@ Do not change this variable if you don't understand what you are doing.
                 (narrow-to-region begin finish))
               (mapc
                (lambda (tuple)
-                 (langtool--create-overlay tuple))
+                 (langtool--create-overlay! tuple))
                (nreverse n-tuple))))))))))
+
+  
+    
+(defun langtool--process-filter (proc event)
+  (langtool--debug "Filter" "%s" event)
+
+  ;;Keep buffering JSON message. When CURL finishes, then parse json.
+  (setq langtool-json-response! (concat langtool-json-response! event)))
+   
+
 
 ;;FIXME sometimes LanguageTool reports wrong column.
 (defun langtool--pointed-context-regexp (message)
@@ -744,6 +739,7 @@ Ordinary no need to change this."
 		         "curl"
 		         (list "http://localhost:8081/v2/check"
 			       "--data" (concat "language=" (or lang langtool-default-language)
+						"&disabledRules=WHITESPACE_RULE"
 						"&text=" (url-hexify-string file-contents))))))
 
 
@@ -759,6 +755,11 @@ Ordinary no need to change this."
 
 (defun langtool--process-sentinel (proc event)
   (when (memq (process-status proc) '(exit signal))
+
+
+    ;;When curl finishes, process buffered JSON data for overlays
+    (langtool-json-to-ovlerays! proc langtool-json-response!)
+
     (let ((source (process-get proc 'langtool-source-buffer))
           (code (process-exit-status proc))
           (pbuf (process-buffer proc))

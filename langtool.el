@@ -340,11 +340,12 @@ Do not change this variable if you don't understand what you are doing.
     (cl-destructuring-bind (command args)
 	(langtool--basic-command&args)
 
+
 	;; Construct arguments pass to jar file.
-	;(setq args (append
-	;            args
-	;            (list "--port" "8081"
-	;                  "-d" (langtool--disabled-rules))))
+	(setq args (append
+	            args
+	            (list "--port" 
+	                  "-d" (langtool--disabled-rules))))
 
 	(when langtool-mother-tongue
 	    (setq args (append args (list "-m" langtool-mother-tongue))))
@@ -529,6 +530,24 @@ Do not change this variable if you don't understand what you are doing.
      (overlay-get ov 'langtool-message))
    (langtool--current-error-overlays)))
 
+
+;;
+;; Utils
+;;
+
+(defun langtool-get-available-tcp-port! ()
+  "Returns an available local port.
+
+   Creates a new network process, letting emacs assign the port.
+   The port is obtained then the network process is killed"
+
+  (let* ((proc (make-network-process :name "langtool-reserve-port" :host 'local :family 'ipv4 :server t :service t))
+	(port (process-contact proc :service)))
+        (stop-process proc)
+	port
+  )
+)
+  
 ;;
 ;; LanguageTool Process
 ;;
@@ -581,7 +600,7 @@ Do not change this variable if you don't understand what you are doing.
         (setq args (append
                     args
                     (list "-jar" (langtool--process-file-name langtool-language-tool-jar))))))))
-    (list command args)))
+    (list command args )))
 
 (defun langtool--process-create-buffer ()
   (generate-new-buffer " *LanguageTool* "))
@@ -746,7 +765,8 @@ Ordinary no need to change this."
 		         "curl"
 		         (list (format "http://localhost:%d/v2/check" (process-get langtool-httpserver-proc :port))
 			       "--data" (concat "language=" (or lang langtool-default-language)
-						"&disabledRules=WHITESPACE_RULE"
+						"&disabledRules=WHITESPACE_RULE,EN_QUOTES"
+						"&enabledRules=And"
 						"&text=" (url-hexify-string file-contents))))))
 
 

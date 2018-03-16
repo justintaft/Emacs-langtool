@@ -8,11 +8,9 @@ Check for grammar errors using LanguageTool.
 `langtool-check to check` to check for and highlight errors.  
 `langtool-correct-buffer`  to fix discovered errors.
 
-
 Grammar checks are quick by using a long-running LanguageTool HTTPServer in the background.
-Credits: Based off implementation https://github.com/mhayashi1120/Emacs-langtool .
 
-
+Credits: Largely based off implementation https://github.com/mhayashi1120/Emacs-langtool .
 
 ## Installation - Mac
 

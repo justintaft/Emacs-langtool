@@ -1,8 +1,7 @@
 ;;; langtool.el --- Grammar check utility using LanguageTool
-
-;;;TODO if line contains [ then regex check fails when grammar checking?
-
 ;; Author: Masahiro Hayashi <mhayashi1120@gmail.com>
+;; Contributors: Justin Taft  - Performance
+;;                              Context Aware Grammar Checking 
 ;; Keywords: docs
 ;; URL: https://github.com/mhayashi1120/Emacs-langtool
 ;; Emacs: GNU Emacs 24 or later

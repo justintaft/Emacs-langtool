@@ -297,6 +297,7 @@ Do not change this variable if you don't understand what you are doing.
   :group 'langtool
   :type 'hook)
 
+
 ;;
 ;; local variables
 ;;
@@ -338,31 +339,37 @@ Do not change this variable if you don't understand what you are doing.
   `(let ((coding-system-for-read langtool-process-coding-system))
      (progn ,@form)))
 
-
-(defun ensure-langtool-is-running! ()
+(defun langtool--ensure-langtool-is-running! ()
   "Start LanguageTool HTTP Server if not already started"
 
-  (when (not langtool-httpserver-proc)
+  (when-let ((proc-needs-starting (not langtool-httpserver-proc))
+            (port-to-use (langtool--get-available-tcp-port!)))
+
 
     (cl-destructuring-bind (command args)
 	(langtool--basic-command&args)
 
-
 	;; Construct arguments pass to jar file.
 	(setq args (append
 	            args
-	            (list "--port" 
-	                  "-d" (langtool--disabled-rules))))
+	            (list "-p" (number-to-string port-to-use))))
 
-	(when langtool-mother-tongue
-	    (setq args (append args (list "-m" langtool-mother-tongue))))
+	;(when langtool-mother-tongue
+	;    (setq args (append args (list "-m" langtool-mother-tongue))))
+
 	(langtool--debug "Command" "%s: %s" command args)
 	(setq langtool-httpserver-proc (langtool--with-java-environ (apply 'start-process "LanguageTool" (generate-new-buffer "LangToolHTTPServer") command args)))
-	(process-put langtool-httpserver-proc :port 8081 )
+	(process-put langtool-httpserver-proc :port port-to-use )
+	(message "Waiting for langtool process to start...") 
 
-	)))
+	;;TODO this is a nasty hack.
+	;;We shouldn't assume sever will be started in two seconds.
+	(sleep-for 2)
 
-
+	(if (eq (process-status langtool-httpserver-proc) 'exit)
+	    (progn (setq langtool-httpserver-proc nil)
+		   (error "LanguageTool failed to start."))
+	    (message "LanguageTool started on port %s" port-to-use)))))
 
 
 (defun langtool-region-active-p ()
@@ -552,7 +559,7 @@ Do not change this variable if you don't understand what you are doing.
 ;; Utils
 ;;
 
-(defun langtool-get-available-tcp-port! ()
+(defun langtool--get-available-tcp-port! ()
   "Returns an available local port.
 
    Creates a new network process, letting emacs assign the port.
@@ -560,7 +567,7 @@ Do not change this variable if you don't understand what you are doing.
 
   (let* ((proc (make-network-process :name "langtool-reserve-port" :host 'local :family 'ipv4 :server t :service t))
 	(port (process-contact proc :service)))
-        (stop-process proc)
+        (delete-process proc)
 	port
   )
 )
@@ -773,7 +780,7 @@ Ordinary no need to change this."
   (when (listp mode-line-process)
     (add-to-list 'mode-line-process '(t langtool-mode-line-message)))
 
-  (ensure-langtool-is-running!)
+  (langtool--ensure-langtool-is-running!)
 
   (langtool--clear-buffer-overlays)
 

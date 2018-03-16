@@ -1,11 +1,11 @@
 ;;; langtool.el --- Grammar check utility using LanguageTool
-;; Author: Masahiro Hayashi <mhayashi1120@gmail.com>
+;; Original Author: Masahiro Hayashi <mhayashi1120@gmail.com>
 ;; Contributors: Justin Taft  - Performance
 ;;                              Context Aware Grammar Checking 
 ;; Keywords: docs
-;; URL: https://github.com/mhayashi1120/Emacs-langtool
+;; URL: https://github.com/justintaft/Emacs-langtool/tree/httpserver
 ;; Emacs: GNU Emacs 24 or later
-;; Version: 1.7.0
+;; Version: 1.8.0
 ;; Package-Requires: ((cl-lib "0.3"))
 
 ;; This program is free software; you can redistribute it and/or
@@ -137,8 +137,6 @@
 ;; * check only docstring (emacs-lisp-mode)
 ;;    or using (derived-mode-p 'prog-mode) and only string and comment
 ;; * java encoding <-> elisp encoding (No enough information..)
-;; * change to --json argument to parse. Do not forget to parse partial json
-;;  in a process filter. Parsing whole json slow down Emacs
 
 ;;; Code:
 
@@ -675,8 +673,6 @@ Do not change this variable if you don't understand what you are doing.
       nil))
 
 (defun langtool-json-to-ovlerays! (proc json)
-   ;;TODO nasty hack. Keep tryign to parse JSON data.
-   ;;When successfully parseed, the entire message has been received.
    ;;Read JSON formatted data
   (if-let ((ht (langtool-json-to-hash-table json)))
    

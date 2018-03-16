@@ -5,7 +5,7 @@ Check for grammar errors using LanguageTool.
 
 ![Grammar error info displays at bottom of frame when cursor is over highlighted error.](./screenshots/langtool-check.png)  
 
-`langtool-check to check` to check for and highlight errors.  
+`langtool-check` to check for and highlight errors.  
 `langtool-correct-buffer`  to fix discovered errors.
 
 Grammar checks are quick by using a long-running LanguageTool HTTPServer in the background.

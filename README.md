@@ -3,17 +3,18 @@ langtool.el
 
 Check for grammar errors using LanguageTool.
 
-![Demo picture showing highlighting of errors and correction process.](https://media.giphy.com/media/20wo4YxXykCWoYHylD/giphy.gif)
+![Grammar error info displays at bottom of frame when cursor is over highlighted error.](./screenshots/langtool-check.png)  
+
+`langtool-check to check` to check for and highlight errors.  
+`langtool-correct-buffer`  to fix discovered errors.
 
 
-`langtool-check` to check for and highlight errors.  
-`langtool-correct-buffer` to fix discovered errors.
-
-Grammar checks are quick by using a long-running LanguageTool HTTPServer in the background. 
-
+Grammar checks are quick by using a long-running LanguageTool HTTPServer in the background.
 Credits: Based off implementation https://github.com/mhayashi1120/Emacs-langtool .
 
-# Installation - Mac
+
+
+## Installation - Mac
 
 Install languagetool:
 
@@ -29,7 +30,7 @@ Place in .emacs:
 ```
 
 
-# Installation -  Other
+## Installation -  Other
 
 Install LanguageTool (and java)
 http://www.languagetool.org/
@@ -169,3 +170,9 @@ M-x langtool-show-message-at-point
 M-x langtool-check-done
 ```
 
+
+## More Screenshots
+
+**langtool-correct-buffer**
+
+![Fixing grammar interactively using langtool-correct-buffer](./screenshots/langtool-correct-buffer.png)

@@ -1,5 +1,7 @@
 ;;; langtool.el --- Grammar check utility using LanguageTool
 
+;;;TODO if line contains [ then regex check fails when grammar checking?
+
 ;; Author: Masahiro Hayashi <mhayashi1120@gmail.com>
 ;; Keywords: docs
 ;; URL: https://github.com/mhayashi1120/Emacs-langtool
@@ -182,6 +184,12 @@
 ;;
 ;; faces
 ;;
+
+(defvar langtool-ignore-grammar-errors-in-type-faces
+  '( markdown-language-info-face
+     markdown-code-face
+     markdown-inline-code-face
+    ))
 
 (defface langtool-errline
   '((((class color) (background dark)) (:background "Firebrick4"))
@@ -408,15 +416,25 @@ Do not change this variable if you don't understand what you are doing.
     ;;Move to offset where grammar error is
     ;;  2. fuzzy match to reported sentence which indicated by ^^^ like string.
     (forward-char offset)
+
+
     (cl-destructuring-bind (start . end)
-        (langtool--fuzzy-search context len)
-      (let ((ov (make-overlay start end)))
-        (overlay-put ov 'langtool-simple-message msg)
-        (overlay-put ov 'langtool-message message)
-        (overlay-put ov 'langtool-suggestions sugs)
-        (overlay-put ov 'langtool-rule-id rule-id)
-        (overlay-put ov 'priority 1)
-        (overlay-put ov 'face 'langtool-errline)))))
+	    (langtool--fuzzy-search context len)
+	  
+
+      ;;Ignore grammar error if word text has a text face to ignore
+      (if (langtool-is-any-list-element-in-list (get-text-property (point) 'face)
+						langtool-ignore-grammar-errors-in-type-faces)
+	    nil
+     	    (let ((ov (make-overlay start end)))
+     	        (overlay-put ov 'langtool-simple-message msg)
+     	        (overlay-put ov 'langtool-message message)
+     	        (overlay-put ov 'langtool-suggestions sugs)
+     	        (overlay-put ov 'langtool-rule-id rule-id)
+     	        (overlay-put ov 'priority 1)
+     	        (overlay-put ov 'face 'langtool-errline))
+      )))
+    )
 
 (defun langtool--clear-buffer-overlays ()
   (mapc
@@ -547,7 +565,14 @@ Do not change this variable if you don't understand what you are doing.
 	port
   )
 )
-  
+
+(defun langtool-is-any-list-element-in-list (list-elements list)
+  (if (listp list-elements)
+    (dolist (element list-elements)
+	(if (member element list)
+	    (return element)))
+    (member list list-elements)))
+
 ;;
 ;; LanguageTool Process
 ;;
@@ -1286,5 +1311,4 @@ Restrict to selection when region is activated.
 (setq langtool-bin "/usr/local/bin/languagetool-server")
 (setq langtool-language-tool-jar nil)
 ;(setq langtool-language-tool-jar "/usr/local/Cellar/languagetool/3.8/libexec/languagetool-server.jar")
-
 

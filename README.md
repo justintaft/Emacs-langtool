@@ -24,7 +24,9 @@ Place in .emacs:
 
 ```
 (require 'langtool)
-(setq langetool-bin "/usr/local/bin/languagetool-server")
+(setq langtool-bin "/usr/local/bin/languagetool-server")
+(setq langtool-enabled-rules '("And"))
+(setq langtool-disabled-rules '("WHITESPACE_RULE" "EN_QUOTES"))
 ```
 
 

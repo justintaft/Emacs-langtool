@@ -266,6 +266,16 @@ String that separated by comma or list of string.
           (list string)
           string))
 
+
+(defcustom langtool-enabled-rules nil
+  "Enabled rules to pass to LanguageTool.
+   String seperatedb y cmma or list of strings."
+  :group 'langtool
+  :type '(choice
+          (list string)
+          string))
+
+
 (defcustom langtool-user-arguments nil
   "Similar to `langtool-java-user-arguments' except this list is appended
  after `-jar' argument.
@@ -302,14 +312,17 @@ Do not change this variable if you don't understand what you are doing.
 ;; local variables
 ;;
 
+(defvar langtool-local-enabled-rules nil)
+(make-variable-buffer-local 'langtool-local-enabled-rules)
+
 (defvar langtool-local-disabled-rules nil)
 (make-variable-buffer-local 'langtool-local-disabled-rules)
 
-(defvar langtool-temp-file nil)
-(make-variable-buffer-local 'langtool-temp-file)
-
 (defvar langtool-buffer-process nil)
 (make-variable-buffer-local 'langtool-buffer-process)
+
+(defvar langtool-buffer-first-grammar-check t)
+(make-variable-buffer-local 'langtool-buffer-first-grammar-check)
 
 (defvar langtool-mode-line-message nil)
 (make-variable-buffer-local 'langtool-mode-line-message)
@@ -353,9 +366,6 @@ Do not change this variable if you don't understand what you are doing.
 	(setq args (append
 	            args
 	            (list "-p" (number-to-string port-to-use))))
-
-	;(when langtool-mother-tongue
-	;    (setq args (append args (list "-m" langtool-mother-tongue))))
 
 	(langtool--debug "Command" "%s: %s" command args)
 	(setq langtool-httpserver-proc (langtool--with-java-environ (apply 'start-process "LanguageTool" (generate-new-buffer "LangToolHTTPServer") command args)))
@@ -583,18 +593,21 @@ Do not change this variable if you don't understand what you are doing.
 ;; LanguageTool Process
 ;;
 
-(defun langtool--disabled-rules ()
-  (let ((custom langtool-disabled-rules)
-        (locals langtool-local-disabled-rules))
-    (cond
-     ((stringp custom)
-      (mapconcat 'identity
-                 (cons custom locals)
-                 ","))
-     (t
-      (mapconcat 'identity
-                 (append custom locals)
-                 ",")))))
+(defun langtool--create-comma-seperated-string (x)
+  (if (stringp x)
+      x
+    (mapconcat 'identity (or x "") ",")))
+
+(defun langtool--enabled-rules () 
+  (concat (langtool--create-comma-seperated-string langtool-enabled-rules)
+	  ","
+	 (langtool--create-comma-seperated-string langtool-local-enabled-rules)))
+
+(defun langtool--disabled-rules () 
+  (concat (langtool--create-comma-seperated-string langtool-disabled-rules)
+	  ","
+	 (langtool--create-comma-seperated-string langtool-local-disabled-rules)))
+
 
 (defun langtool--check-command ()
   (cond
@@ -701,7 +714,6 @@ Do not change this variable if you don't understand what you are doing.
   (setq langtool-json-response! (concat langtool-json-response! event)))
    
 
-
 ;;FIXME sometimes LanguageTool reports wrong column.
 (defun langtool--pointed-context-regexp (message)
   (when (string-match "\\(.*\\)\n\\( *\\)\\(\\^+\\)" message)
@@ -796,8 +808,8 @@ Ordinary no need to change this."
 		         "curl"
 		         (list (format "http://localhost:%d/v2/check" (process-get langtool-httpserver-proc :port))
 			       "--data" (concat "language=" (or lang langtool-default-language)
-						"&disabledRules=WHITESPACE_RULE,EN_QUOTES"
-						"&enabledRules=And"
+						"&enabledRules=" (url-hexify-string (langtool--enabled-rules))
+						"&disabledRules=" (url-hexify-string (langtool--disabled-rules))
 						"&text=" (url-hexify-string file-contents))))))
 
 
@@ -1239,20 +1251,16 @@ Restrict to selection when region is activated.
      (list (langtool-read-lang-name))))
   (langtool--check-command)
   ;; probablly ok...
-  (let* ((file (buffer-file-name))
-         (region-p (langtool-region-active-p))
+  (let* ((region-p (langtool-region-active-p))
          (begin (and region-p (region-beginning)))
          (finish (and region-p (region-end))))
     (when region-p
       (deactivate-mark))
-    (unless langtool-temp-file
-      (setq langtool-temp-file (make-temp-file "langtool-")))
-    ;; create temporary file to pass the text contents to LanguageTool
-    (when (or (null file)
-              (buffer-modified-p)
+    (when (or (buffer-modified-p)
               region-p
               ;; 1 is dos EOL style, this must convert to unix
-              (eq (coding-system-eol-type buffer-file-coding-system) 1))
+              (eq (coding-system-eol-type buffer-file-coding-system) 1)
+	      langtool-buffer-first-grammar-check)
       (save-restriction
         (widen)
         (let ((coding-system-for-write
@@ -1314,7 +1322,3 @@ Restrict to selection when region is activated.
 (when (not langtool--debug)
       (langtool-toggle-debug))
 (setq langtool-httpserver-proc nil)
-(setq langtool-bin "/usr/local/bin/languagetool-server")
-(setq langtool-language-tool-jar nil)
-;(setq langtool-language-tool-jar "/usr/local/Cellar/languagetool/3.8/libexec/languagetool-server.jar")
-

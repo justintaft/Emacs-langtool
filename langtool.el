@@ -937,6 +937,7 @@ Ordinary no need to change this."
       (funcall 'coding-system-aliases coding-system)
     (coding-system-get coding-system 'alias-coding-systems)))
 
+;;TODO fix, as HTTP Sever is now used, so --list is not supported
 (defun langtool--available-languages ()
   (cl-destructuring-bind (command args)
       (langtool--basic-command&args)
@@ -947,7 +948,7 @@ Ordinary no need to change this."
         (when (and command args
                    (executable-find command)
                    (= (langtool--with-java-environ
-                       (apply 'call-process command nil t nil args) 0)))
+                       (apply 'call-process command nil t nil args)) 0))
           (goto-char (point-min))
           (while (re-search-forward "^\\([^\s\t]+\\)" nil t)
             (setq res (cons (match-string 1) res)))

@@ -1,6 +1,8 @@
 langtool.el
 ===========
 
+![Travis Build Status.](https://travis-ci.org/justintaft/Emacs-langtool.svg?branch=httpserver)
+
 Check for grammar errors using LanguageTool.
 
 ![Grammar error info displays at bottom of frame when cursor is over highlighted error.](./screenshots/langtool-check.png)  

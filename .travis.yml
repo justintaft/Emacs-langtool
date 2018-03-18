@@ -51,6 +51,7 @@ cache:
   - test-deps
 
 script:
+  - java -cp ./test-deps/LanguageTool-4.0/languagetool.jar org.languagetool.server.HTTPServer -p 59409
   - uname -a
   - make check
 

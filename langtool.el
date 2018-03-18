@@ -416,7 +416,7 @@ Do not change this variable if you don't understand what you are doing.
 ;;FIXME
 ;;http://sourceforge.net/tracker/?func=detail&aid=3054895&group_id=110216&atid=655717
 (defun langtool--fuzzy-search (context-regexp length)
-  (let* ((regexp (concat ".*?" context-regexp))
+  (let* ((regexp (concat ".*?" (regexp-quote context-regexp)))
          (default (cons (point) (+ (point) length))))
     (or (and (null regexp)
              (cons (point) (+ (point) length)))

@@ -6,6 +6,7 @@ env:
   matrix:
 #    - EMACS=emacs23
     - EMACS=emacs24
+    - EMACS=emacs25
     - EMACS=emacs-snapshot
   global:
     # - SOME_TOKEN=some_value

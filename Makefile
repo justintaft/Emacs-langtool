@@ -6,9 +6,9 @@ test-deps/ert-async.el:
 	wget "https://raw.githubusercontent.com/rejeep/ert-async.el/master/ert-async.el" -O ./test-deps/ert-async.el
 
 check: compile print-encoding test-deps/ert-async.el
-	$(EMACS) -q -batch -l subr-x.el -l langtool.el -l test-deps/ert-async.el -l .test-init.el -l langtool-test.el \
+	$(EMACS) -q -batch -l langtool.el -l test-deps/ert-async.el -l .test-init.el -l langtool-test.el \
 		-f ert-run-tests-batch-and-exit
-	$(EMACS) -q -batch -l subr-x.el -l langtool.elc -l test-deps/ert-async.el -l .test-init.el -l langtool-test.el \
+	$(EMACS) -q -batch -l langtool.elc -l test-deps/ert-async.el -l .test-init.el -l langtool-test.el \
 		-f ert-run-tests-batch-and-exit
 
 compile:

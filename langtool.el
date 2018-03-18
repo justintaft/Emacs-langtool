@@ -361,8 +361,9 @@ Do not change this variable if you don't understand what you are doing.
 (defun langtool--ensure-langtool-is-running! ()
   "Start LanguageTool HTTP Server if not already started"
 
-  (when-let ((proc-needs-starting (not langtool-httpserver-proc))
-             (port-to-use (langtool--get-available-tcp-port!)))
+
+  (if (not langtool-httpserver-proc)
+    (let ((port-to-use (langtool--get-available-tcp-port!)))
 
 
     (cl-destructuring-bind (command args)
@@ -385,7 +386,7 @@ Do not change this variable if you don't understand what you are doing.
 	(if (eq (process-status langtool-httpserver-proc) 'exit)
 	    (progn (setq langtool-httpserver-proc nil)
 		   (error "LanguageTool failed to start."))
-	    (message "LanguageTool started on port %s" port-to-use)))))
+	    (message "LanguageTool started on port %s" port-to-use))))))
 
 
 (defun langtool-region-active-p ()
@@ -691,7 +692,9 @@ Do not change this variable if you don't understand what you are doing.
 
 (defun langtool-json-to-ovlerays! (proc json)
    ;;Read JSON formatted data
-  (if-let ((ht (langtool-json-to-hash-table json)))
+  (let ((ht (langtool-json-to-hash-table json)))
+    (if (not ht) (return))
+
    
   (with-current-buffer (process-buffer proc)
     (goto-char (point-max))

@@ -3,7 +3,7 @@ langtool.el
 
 ![Travis Build Status.](https://travis-ci.org/justintaft/Emacs-langtool.svg?branch=httpserver)
 
-Check for grammar errors using LanguageTool 4.0.
+Check for grammar errors using LanguageTool 4.0 and Java 8.
 
 ![Grammar error info displays at bottom of frame when cursor is over highlighted error.](./screenshots/langtool-check.png)  
 
@@ -13,6 +13,7 @@ Check for grammar errors using LanguageTool 4.0.
 Grammar checks are quick by using a long-running LanguageTool HTTPServer in the background.
 
 Credits: Largely based off implementation https://github.com/mhayashi1120/Emacs-langtool .
+
 
 ## Installation - Mac
 
@@ -31,20 +32,29 @@ Place in .emacs:
 (setq langtool-disabled-rules '("WHITESPACE_RULE" "EN_QUOTES"))
 ```
 
+## Installation -  Linux
 
-## Installation -  Other
+Install Java8:
 
-Install LanguageTool (and java)
-http://www.languagetool.org/
+https://java.com/en/download/help/mac_install.xml
 
-Put this file into load-path'ed directory, and byte compile it if
-desired. And put the following expression into your ~/.emacs.
 
+Download languagetool:
+
+```
+mkdir ~/.langtool
+wget 'https://languagetool.org/download/LanguageTool-4.0.zip' -O /tmp/LanguageTool-4.0.zip 
+unzip -d ~/.langtool /tmp/LanguageTool-4.0.zip
+```
+
+Place in .emacs:
 ```
 (require 'langtool)
-(setq langtool-language-tool-jar "/path/to/languagetool.jar")
-(setq langtool-language-tool-commandline-jar "/path/to/languagetool-commandline.jar")
+(setq langtool-language-tool-commandline-jar "~/.langtool/LanguageTool-4.0/languagetool-commandline.jar")
+(setq langtool-language-tool-jar "~/.langtool/LanguageTool-4.0/languagetool.jar")
 ```
+
+## Installation - Other
 
 Alternatively, you can set the classpath where LanguageTool's jars reside:
 
@@ -54,9 +64,18 @@ Alternatively, you can set the classpath where LanguageTool's jars reside:
       "/usr/share/languagetool:/usr/share/java/languagetool/*")
 ```
 
-These settings are optional:
+## Troubleshooting
 
-* Key binding if you desired.
+* Currently GNU java version is not working.
+  Please change the variable to a Java8 executable.
+
+```
+(setq langtool-java-bin "/path/to/java")
+```
+
+## Key Bindings (Optional)
+
+Place in .emacs:
 
 ```
 (global-set-key "\C-x4w" 'langtool-check)
@@ -65,6 +84,9 @@ These settings are optional:
 (global-set-key "\C-x44" 'langtool-show-message-at-point)
 (global-set-key "\C-x4c" 'langtool-correct-buffer)
 ```
+
+
+## Configuration
 
 * Default language is detected by LANG/LC_ALL environment variable.
   Please set `langtool-default-language` if you need to change default value.
@@ -75,12 +97,6 @@ These settings are optional:
 
   Otherwise, invoke `M-x langtool-check` with `C-u` (universal-argument)
 
-* Currently GNU java version is not working.
-  Please change the variable to your favorite java executable.
-
-```
-(setq langtool-java-bin "/path/to/java")
-```
 
 * Maybe your LanguageTool have launcher. (e.g. Gentoo)
   You need to set `langtool-bin`.
@@ -168,8 +184,10 @@ M-x langtool-check-done
 ```
 
 
+
 ## More Screenshots
 
 **langtool-correct-buffer**
 
 ![Fixing grammar interactively using langtool-correct-buffer](./screenshots/langtool-correct-buffer.png)
+

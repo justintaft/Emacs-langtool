@@ -236,6 +236,14 @@ No need to set this variable when `langtool-java-classpath' is set."
   :group 'langtool
   :type 'file)
 
+
+(defcustom langtool-language-tool-commandline-jar nil
+  "LanguageTool command-line jar file.
+
+No need to set this variable when `langtool-java-classpath' is set."
+  :group 'langtool
+  :type 'file)
+
 (defcustom langtool-java-classpath nil
   "Custom classpath to use on special environment. (e.g. Arch Linux)
 Do not set both of this variable and `langtool-language-tool-jar'.
@@ -354,11 +362,11 @@ Do not change this variable if you don't understand what you are doing.
   "Start LanguageTool HTTP Server if not already started"
 
   (when-let ((proc-needs-starting (not langtool-httpserver-proc))
-            (port-to-use (langtool--get-available-tcp-port!)))
+             (port-to-use (langtool--get-available-tcp-port!)))
 
 
     (cl-destructuring-bind (command args)
-	(langtool--basic-command&args)
+	(langtool--basic--command&args-httpserver)
 
 	;; Construct arguments pass to jar file.
 	(setq args (append
@@ -623,7 +631,15 @@ Do not change this variable if you don't understand what you are doing.
   (when langtool-buffer-process
     (error "Another process is running")))
 
-(defun langtool--basic-command&args ()
+
+(defun langtool--basic-command&args-main ()
+    (langtool--basic-command&args langtool-language-tool-commandline-jar "org.languagetool.commandline.Main"))
+
+(defun langtool--basic--command&args-httpserver ()
+  (langtool--basic-command&args  langtool-language-tool-jar "org.languagetool.server.HTTPServer"))
+  
+
+(defun langtool--basic-command&args (jar class)
   (let (command args)
     (cond
      (langtool-bin
@@ -636,12 +652,13 @@ Do not change this variable if you don't understand what you are doing.
        (langtool-java-classpath
         (setq args (append
                     args
-                    (list "-cp" langtool-java-classpath
-                          "org.languagetool.server.HTTPServer"))))
+                    (list "-cp" langtool-java-classpath class))))
        (langtool-language-tool-jar
         (setq args (append
                     args
-                    (list "-jar" (langtool--process-file-name langtool-language-tool-jar))))))))
+                    (list "-cp" (langtool--process-file-name jar) class
+
+			  )))))))
     (list command args )))
 
 (defun langtool--process-create-buffer ()
@@ -796,7 +813,7 @@ Ordinary no need to change this."
   (setq langtool-json-response! "")
     
   (cl-destructuring-bind (command args)
-      (langtool--basic-command&args)
+      (langtool--basic--command&args-httpserver)
     (let* ((buffer (langtool--process-create-buffer))
 	   (proc (apply 'start-process
 		        "LanguageToolCurl"
@@ -937,10 +954,9 @@ Ordinary no need to change this."
       (funcall 'coding-system-aliases coding-system)
     (coding-system-get coding-system 'alias-coding-systems)))
 
-;;TODO fix, as HTTP Sever is now used, so --list is not supported
 (defun langtool--available-languages ()
   (cl-destructuring-bind (command args)
-      (langtool--basic-command&args)
+      (langtool--basic-command&args-main)
     ;; Construct arguments pass to jar file.
     (setq args (append args (list "--list")))
     (let (res)

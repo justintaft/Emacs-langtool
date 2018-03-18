@@ -36,6 +36,7 @@ install:
     fi
 
 script:
+  - wet "https://raw.githubusercontent.com/rejeep/ert-async.el/master/ert-async.el"
   - uname -a
   - make check
 

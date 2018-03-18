@@ -6,6 +6,8 @@ addons:
   apt:
     packages:
       - oracle-java8-installer
+      - oracle-java8-set-default
+
 env:
   matrix:
 #    - EMACS=emacs23
@@ -40,6 +42,8 @@ install:
         sudo apt-get -qq install emacs-snapshot &&
         sudo apt-get -qq install emacs-snapshot-el;
     fi
+
+  - java -version
 
 
 cache:

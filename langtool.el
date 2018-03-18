@@ -186,6 +186,8 @@
   '( markdown-language-info-face
      markdown-code-face
      markdown-inline-code-face
+     font-lock-function-name-face
+     font-lock-keyword-face
     ))
 
 (defface langtool-errline
@@ -594,7 +596,7 @@ Do not change this variable if you don't understand what you are doing.
     (dolist (element list-elements)
 	(if (member element list)
 	    (return element)))
-    (member list list-elements)))
+    (member list-elements list)))
 
 ;;
 ;; LanguageTool Process

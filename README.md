@@ -3,7 +3,7 @@ langtool.el
 
 ![Travis Build Status.](https://travis-ci.org/justintaft/Emacs-langtool.svg?branch=httpserver)
 
-Check for grammar errors using LanguageTool.
+Check for grammar errors using LanguageTool 4.0.
 
 ![Grammar error info displays at bottom of frame when cursor is over highlighted error.](./screenshots/langtool-check.png)  
 
@@ -42,13 +42,8 @@ desired. And put the following expression into your ~/.emacs.
 
 ```
 (require 'langtool)
-(setq langtool-language-tool-jar "/path/to/languagetool-commandline.jar")
-```
-
-If you use old version of LanguageTool, may be:
-
-```
-(setq langtool-language-tool-jar "/path/to/LanguageTool.jar")
+(setq langtool-language-tool-jar "/path/to/languagetool.jar")
+(setq langtool-language-tool-commandline-jar "/path/to/languagetool-commandline.jar")
 ```
 
 Alternatively, you can set the classpath where LanguageTool's jars reside:

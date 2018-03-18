@@ -12,6 +12,7 @@ env:
 
 before_install:
   - git submodule --quiet update --init --recursive
+  - mkdir test-deps || echo ""
   - wget "https://languagetool.org/download/LanguageTool-4.0.zip" -O ./test-deps/LanguageTool-4.0.zip
   - unzip -d ./test-deps ./test-deps/LanguageTool-4.0.zip
   - echo '(setq langtool-language-tool-jar "./test-deps/LanguageTool-4.0/languagetool-commandline.jar")' > .test-init.el

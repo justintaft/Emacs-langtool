@@ -17,6 +17,10 @@ Credits: Largely based off implementation https://github.com/mhayashi1120/Emacs-
 
 ## Installation - Mac
 
+Install Java8:
+
+https://java.com/en/download/help/mac_install.xml
+
 Install languagetool:
 
 ```
@@ -32,12 +36,15 @@ Place in .emacs:
 (setq langtool-disabled-rules '("WHITESPACE_RULE" "EN_QUOTES"))
 ```
 
-## Installation -  Linux
+## Installation -  Linux (Ubuntu)
 
-Install Java8:
+Install Java8
 
-https://java.com/en/download/help/mac_install.xml
-
+```
+sudo add-apt-repository ppa:webupd8team/java
+sudo apt-get update
+apt-get install oracle-java8-installer oracle-java8-set-default
+```
 
 Download languagetool:
 

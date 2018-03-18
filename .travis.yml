@@ -38,6 +38,11 @@ install:
         sudo apt-get -qq install emacs-snapshot-el;
     fi
 
+
+cache:
+  directories:
+  - test-deps
+
 script:
   - uname -a
   - make check

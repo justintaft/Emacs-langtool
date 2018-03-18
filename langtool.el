@@ -380,8 +380,8 @@ Do not change this variable if you don't understand what you are doing.
 	(message "Waiting for langtool process to start...") 
 
 	;;TODO this is a nasty hack.
-	;;We shouldn't assume sever will be started in five seconds.
-	(sleep-for 5)
+	;;We shouldn't assume sever will be started in two seconds.
+	(sleep-for 2)
 
 	(if (eq (process-status langtool-httpserver-proc) 'exit)
 	    (progn (setq langtool-httpserver-proc nil)

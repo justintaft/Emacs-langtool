@@ -2,6 +2,10 @@
 language: generic
 
 sudo: true
+addons:
+  apt:
+    packages:
+      - oracle-java8-installer
 env:
   matrix:
 #    - EMACS=emacs23

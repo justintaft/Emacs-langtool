@@ -12,7 +12,7 @@ check: compile print-encoding test-deps/ert-async.el
 		-f ert-run-tests-batch-and-exit
 
 compile:
-	$(EMACS) -q -batch -l subr-x.el -f batch-byte-compile \
+	$(EMACS) -q -batch -f batch-byte-compile \
 		langtool.el
 
 # print encoding conversion

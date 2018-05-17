@@ -683,34 +683,26 @@ Do not change this variable if you don't understand what you are doing.
 
 
 (defun langtool-json-to-hash-table (json)
-    (condition-case
-	nil
-	(let* ((json-object-type 'hash-table)
-	       (json-array-type 'list)
-	       (json-key-type 'string))
-	      (json-read-from-string langtool-json-response!))
-      nil))
+    (let* ((json-object-type 'hash-table)
+	    (json-array-type 'list)
+	    (json-key-type 'string))
+	    (json-read-from-string json)))
 
-(defun langtool-json-to-ovlerays! (proc json)
-   ;;Read JSON formatted data
-  (let ((ht (langtool-json-to-hash-table json)))
-    (if (not ht) (return))
-
-   
-  (with-current-buffer (process-buffer proc)
+(defun langtool-json-to-overlays! (proc ht response-buffer)
+  (with-current-buffer response-buffer
     (goto-char (point-max))
-    (insert event)
-    (let ((min (or (process-get proc 'langtool-process-done)
+    ;(insert event)
+    (let ((min (or (alist-get 'langtool-process-done proc)
                    (point-min)))
-          (buffer (process-get proc 'langtool-source-buffer))
-          (begin (process-get proc 'langtool-region-begin))
-          (finish (process-get proc 'langtool-region-finish))
+          (buffer (alist-get 'langtool-source-buffer proc))
+          (begin (alist-get 'langtool-region-begin proc))
+          (finish (alist-get 'langtool-region-finish proc))
           n-tuple)
       (goto-char min)
 
       (setq n-tuple (gethash "matches" ht))
 
-      (process-put proc 'langtool-process-done (point))
+      (add-to-list 'proc `(langtool-process-done ,(point))) 
       (when (buffer-live-p buffer)
         (with-current-buffer buffer
           (save-excursion
@@ -720,15 +712,9 @@ Do not change this variable if you don't understand what you are doing.
               (mapc
                (lambda (tuple)
                  (langtool--create-overlay! tuple))
-               (nreverse n-tuple))))))))))
+               (nreverse n-tuple)))))))))
 
   
-    
-(defun langtool--process-filter (proc event)
-  (langtool--debug "Filter" "%s" event)
-
-  ;;Keep buffering JSON message. When CURL finishes, then parse json.
-  (setq langtool-json-response! (concat langtool-json-response! event)))
    
 
 ;;FIXME sometimes LanguageTool reports wrong column.
@@ -804,6 +790,18 @@ Ordinary no need to change this."
       (setq args value)))
     (copy-sequence args)))
 
+
+(defun langtool-generate-json-url ()
+    (format "http://localhost:%d/v2/check" (process-get langtool-httpserver-proc :port)))
+
+(defun langtool-format-json-request-body  (file-contents)
+  (concat "language="
+	  (or lang langtool-default-language)
+	  "&enabledRules="
+	  (url-hexify-string (langtool--enabled-rules))
+	  "&disabledRules=" (url-hexify-string (langtool--disabled-rules))
+	  "&text=" (url-hexify-string file-contents)))
+
 (defun langtool--invoke-process (file-contents begin finish &optional lang)
 
   (when (listp mode-line-process)
@@ -813,80 +811,85 @@ Ordinary no need to change this."
 
   (langtool--clear-buffer-overlays)
 
-  ;;clear buffered json response
-  (setq langtool-json-response! "")
-    
   (cl-destructuring-bind (command args)
       (langtool--basic--command&args-httpserver)
-    (let* ((buffer (langtool--process-create-buffer))
-	   (proc (apply 'start-process
-		        "LanguageToolCurl"
-		         buffer
-		         "curl"
-		         (list (format "http://localhost:%d/v2/check" (process-get langtool-httpserver-proc :port))
-			       "--data" (concat "language=" (or lang langtool-default-language)
-						"&enabledRules=" (url-hexify-string (langtool--enabled-rules))
-						"&disabledRules=" (url-hexify-string (langtool--disabled-rules))
-						"&text=" (url-hexify-string file-contents))))))
+    (let* ((url (langtool-generate-json-url))
+	   (url-request-method "POST") 
+	   (url-request-extra-heders '(("Content-Type" . "application/x-www-form-urlencoded")))
+	   (url-request-data (langtool-format-json-request-body file-contents)))
+      
+	(setq langtool-buffer-process `((langtool-source-buffer . ,(current-buffer))
+					(langtool-region-begin . ,begin)
+					(langtool-region-finish . ,finish)))
+
+        (url-retrieve url 'langtool-json-callback (list langtool-buffer-process))
+	(setq langtool-mode-line-message
+		(list " LanguageTool"
+		    (propertize ":run" 'face compilation-info-face))))))
 
 
-      (set-process-filter proc 'langtool--process-filter)
-      (set-process-sentinel proc 'langtool--process-sentinel)
-      (process-put proc 'langtool-source-buffer (current-buffer))
-      (process-put proc 'langtool-region-begin begin)
-      (process-put proc 'langtool-region-finish finish)
-      (setq langtool-buffer-process proc)
-      (setq langtool-mode-line-message
-            (list " LanguageTool"
-                  (propertize ":run" 'face compilation-info-face))))))
+(defun langtool-json-callback (status proc)
+  ; TODO check status to ensure no error occurred
+  ; TODO check for 500 error
+  ;(error "LanguageTool exited abnormally with code %d (%s)")
 
-(defun langtool--process-sentinel (proc event)
-  (when (memq (process-status proc) '(exit signal))
+  ;Delete HTTP headers so buffer only has response body
+  (beginning-of-buffer)
+  (search-forward "\n\n")
+  (delete-region 1 (point))
+
+  (unwind-protect 
+      (langtool--process-json-response proc (buffer-substring-no-properties 1 (point-max)) (current-buffer))
+    (kill-buffer)
+    (switch-to-buffer (alist-get 'langtool-source-buffer proc))
+    (setq langtool-buffer-process nil)
+    )
+)
+
+(defun langtool--process-json-response (proc json response-buffer)
+   ;;Read JSON formatted data
+    (let ((source (alist-get 'langtool-source-buffer proc))
+	  ;TODO Don't Assumme everything went well
+	  (code 0)
+          hash-table dead marks msg face)
 
 
-    ;;When curl finishes, process buffered JSON data for overlays
-    (langtool-json-to-ovlerays! proc langtool-json-response!)
+      (condition-case nil
+        (setq hash-table (langtool-json-to-hash-table json))
+	 nil)
 
-    (let ((source (process-get proc 'langtool-source-buffer))
-          (code (process-exit-status proc))
-          (pbuf (process-buffer proc))
-          dead marks msg face)
+      (when (not hash-table)
+        (error "Invalid JSON response from langtool."))
+
+      (langtool-json-to-overlays! proc hash-table response-buffer)
       (when (/= code 0)
         (setq face compilation-error-face))
+
       (cond
        ((buffer-live-p source)
         (with-current-buffer source
 	  (langtool--debug "checking marks" "checking marks")
           (setq marks (langtool--overlays-region (point-min) (point-max)))
           (setq face (if marks compilation-info-face compilation-warning-face))
-          (setq langtool-buffer-process nil)
           (setq langtool-mode-line-message
                 (list " LanguageTool"
                       (propertize ":exit" 'face face)))))
        (t (setq dead t)))
-      (cond
-       (dead)
 
-       ((/= code 0)
-        (let ((msg
-               (if (buffer-live-p pbuf)
-                   ;; Get first line of output.
-                   (with-current-buffer pbuf
-                     (goto-char (point-min))
-                     (buffer-substring (point) (point-at-eol)))
-                 "Buffer was dead")))
-          (message "LanguageTool exited abnormally with code %d (%s)"
-                   code msg)))
-       (marks
-        (run-hooks 'langtool-error-exists-hook)
-        (message "%s"
-                 (substitute-command-keys
-                  "Type \\[langtool-correct-buffer] to correct buffer.")))
-       (t
-        (run-hooks 'langtool-noerror-hook)
-        (message "LanguageTool successfully finished with no error.")))
-      (when (buffer-live-p pbuf)
-        (kill-buffer pbuf)))))
+      (cond
+        (marks
+          (run-hooks 'langtool-error-exists-hook)
+          (message "%s"
+                   (substitute-command-keys
+                    "Type \\[langtool-correct-buffer] to correct buffer.")))
+	(t
+	  (run-hooks 'langtool-noerror-hook)
+          (message "LanguageTool successfully finished with no error.")))))
+
+       
+
+    
+
 
 (defun langtool--cleanup-process ()
   ;; cleanup mode-line
@@ -1339,3 +1342,4 @@ Restrict to selection when region is activated.
 (when (not langtool--debug)
       (langtool-toggle-debug))
 (setq langtool-httpserver-proc nil)
+

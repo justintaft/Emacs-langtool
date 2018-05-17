@@ -17,9 +17,9 @@ Credits: Largely based off implementation https://github.com/mhayashi1120/Emacs-
 
 ## Installation - Mac
 
-Install Java8:
+Install Java 8:
 
-https://java.com/en/download/help/mac_install.xml
+https://java.com/en/download/
 
 Install languagetool:
 
@@ -27,7 +27,7 @@ Install languagetool:
 brew install languagetool
 ```
 
-Place in .emacs:
+Place in `.emacs`:
 
 ```
 (require 'langtool)
@@ -38,7 +38,7 @@ Place in .emacs:
 
 ## Installation -  Linux (Ubuntu)
 
-Install Java8
+Install Java 8
 
 ```
 sudo add-apt-repository ppa:webupd8team/java
@@ -46,7 +46,7 @@ sudo apt-get update
 apt-get install oracle-java8-installer oracle-java8-set-default
 ```
 
-Download languagetool:
+Download LanguageTool:
 
 ```
 mkdir ~/.langtool
@@ -54,27 +54,41 @@ wget 'https://languagetool.org/download/LanguageTool-4.0.zip' -O /tmp/LanguageTo
 unzip -d ~/.langtool /tmp/LanguageTool-4.0.zip
 ```
 
-Place in .emacs:
+Place in `.emacs`:
 ```
 (require 'langtool)
 (setq langtool-language-tool-commandline-jar "~/.langtool/LanguageTool-4.0/languagetool-commandline.jar")
 (setq langtool-language-tool-jar "~/.langtool/LanguageTool-4.0/languagetool.jar")
+(setq langtool-enabled-rules '("And"))
+(setq langtool-disabled-rules '("WHITESPACE_RULE" "EN_QUOTES"))
 ```
 
 ## Installation - Other
 
-Alternatively, you can set the classpath where LanguageTool's jars reside:
+Install Java 8
+
+```
+https://java.com/en/download/
+```
+
+Download and Unzip Language Tool to a directory.
+
+https://languagetool.org/download/LanguageTool-4.0.zip'
+
+Copy below to `.emacs` and update the `langtool-java-classpath` to point to directory containing LanguageTool `.jar` files:
 
 ```
 (require 'langtool)
 (setq langtool-java-classpath
       "/usr/share/languagetool:/usr/share/java/languagetool/*")
+(setq langtool-enabled-rules '("And"))
+(setq langtool-disabled-rules '("WHITESPACE_RULE" "EN_QUOTES"))
 ```
 
 ## Troubleshooting
 
-* Currently GNU java version is not working.
-  Please change the variable to a Java8 executable.
+* Currently GNU Java version is not working.
+  Please change the variable to a Java 8 executable.
 
 ```
 (setq langtool-java-bin "/path/to/java")
@@ -82,7 +96,7 @@ Alternatively, you can set the classpath where LanguageTool's jars reside:
 
 ## Key Bindings (Optional)
 
-Place in .emacs:
+Place in `.emacs`:
 
 ```
 (global-set-key "\C-x4w" 'langtool-check)

@@ -355,6 +355,12 @@ Do not change this variable if you don't understand what you are doing.
 ;; basic functions
 ;;
 
+(defun langtool--alist-get (key alist)
+     "Return the value associated to KEY in ALIST.
+This function is needed for Emacsen older than v25."
+  (cdr (assoc key alist)))
+
+
 (defmacro langtool--with-java-environ (&rest form)
   `(let ((coding-system-for-read langtool-process-coding-system))
      (progn ,@form)))
@@ -692,11 +698,11 @@ Do not change this variable if you don't understand what you are doing.
   (with-current-buffer response-buffer
     (goto-char (point-max))
     ;(insert event)
-    (let ((min (or (alist-get 'langtool-process-done proc)
+    (let ((min (or (langtool--alist-get 'langtool-process-done proc)
                    (point-min)))
-          (buffer (alist-get 'langtool-source-buffer proc))
-          (begin (alist-get 'langtool-region-begin proc))
-          (finish (alist-get 'langtool-region-finish proc))
+          (buffer (langtool--alist-get 'langtool-source-buffer proc))
+          (begin (langtool--alist-get 'langtool-region-begin proc))
+          (finish (langtool--alist-get 'langtool-region-finish proc))
           n-tuple)
       (goto-char min)
 
@@ -841,14 +847,14 @@ Ordinary no need to change this."
   (unwind-protect 
       (langtool--process-json-response proc (buffer-substring-no-properties 1 (point-max)) (current-buffer))
     (kill-buffer)
-    (switch-to-buffer (alist-get 'langtool-source-buffer proc))
+    (switch-to-buffer (langtool--alist-get 'langtool-source-buffer proc))
     (setq langtool-buffer-process nil)
     )
 )
 
 (defun langtool--process-json-response (proc json response-buffer)
    ;;Read JSON formatted data
-    (let ((source (alist-get 'langtool-source-buffer proc))
+    (let ((source (langtool--alist-get 'langtool-source-buffer proc))
 	  ;TODO Don't Assumme everything went well
 	  (code 0)
           hash-table dead marks msg face)

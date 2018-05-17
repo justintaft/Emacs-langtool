@@ -1,7 +1,5 @@
 ;;; langtool.el --- Grammar check utility using LanguageTool
 ;; Original Author: Masahiro Hayashi <mhayashi1120@gmail.com>
-;; Contributors: Justin Taft  - Performance
-;;                              Context Aware Grammar Checking 
 ;; Contributors: Justin Taft <justtaft@gmail.com> - Performance and Context Aware Highlighting
 ;; Keywords: docs
 ;; URL: https://github.com/justintaft/Emacs-langtool/tree/httpserver

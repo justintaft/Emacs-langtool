@@ -50,8 +50,8 @@ Download LanguageTool:
 
 ```
 mkdir ~/.langtool
-wget 'https://languagetool.org/download/LanguageTool-4.0.zip' -O /tmp/LanguageTool-4.0.zip 
-unzip -d ~/.langtool /tmp/LanguageTool-4.0.zip
+wget 'https://languagetool.org/download/LanguageTool-stable.zip' -O /tmp/LanguageTool-stable.zip 
+unzip -d ~/.langtool /tmp/LanguageTool-stable.zip
 ```
 
 Place in `.emacs`:
@@ -73,7 +73,7 @@ https://java.com/en/download/
 
 Download and Unzip Language Tool to a directory.
 
-https://languagetool.org/download/LanguageTool-4.0.zip'
+https://languagetool.org/download/LanguageTool-stable.zip'
 
 Copy below to `.emacs` and update the `langtool-java-classpath` to point to directory containing LanguageTool `.jar` files:
 

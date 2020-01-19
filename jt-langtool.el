@@ -1,4 +1,4 @@
-;;; langtool.el --- Grammar check utility using LanguageTool
+;;; jt-langtool.el --- Grammar check utility using LanguageTool
 ;; Original Author: Masahiro Hayashi <mhayashi1120@gmail.com>
 ;; Contributors: Justin Taft <justtaft@gmail.com> - Performance and Context Aware Highlighting
 ;; Keywords: docs
@@ -32,7 +32,7 @@
 ;; Put this file into load-path'ed directory, and byte compile it if
 ;; desired. And put the following expression into your ~/.emacs.
 ;;
-;;     (require 'langtool)
+;;     (require 'jt-langtool)
 ;;     (setq langtool-language-tool-jar "/path/to/languagetool-commandline.jar")
 ;;
 ;; If you use old version of LanguageTool, may be:
@@ -41,7 +41,7 @@
 ;;
 ;; Alternatively, you can set the classpath where LanguageTool's jars reside:
 ;;
-;;     (require 'langtool)
+;;     (require 'jt-langtool)
 ;;     (setq langtool-java-classpath
 ;;           "/usr/share/languagetool:/usr/share/java/languagetool/*")
 
@@ -1340,12 +1340,12 @@ Restrict to selection when region is activated.
   (unless langtool-default-language
     (setq langtool-default-language (or mt "en-GB"))))
 
-(provide 'langtool)
+(provide 'jt-langtool)
 
-;;; langtool.el ends here
+;;; jt-langtool.el ends here
 
 
-(when (not langtool--debug)
-      (langtool-toggle-debug))
-(setq langtool-httpserver-proc nil)
+;;(when (not langtool--debug)
+;;      (langtool-toggle-debug))
+;;(setq langtool-httpserver-proc nil)
 
